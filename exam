@@ -1,0 +1,95 @@
+#include "mbed.h"
+#include <cstdio>
+
+#define SLEEP_TIME_MS 1000
+#define ACTIVATION_PAUSE_MS 1000
+#include "DFRobot_RGBLCD1602.h"
+#include "HTS221Sensor.h"
+
+InterruptIn button(BUTTON1);
+
+I2C lcdI2C(D14, D15);
+DFRobot_RGBLCD1602 lcd(&lcdI2C);
+DevI2C i2c(PB_11, PB_10);
+HTS221Sensor hts_sensor(&i2c);
+
+static BufferedSerial serial_port(USBTX, USBRX, 115200);
+
+float humidity;
+float temperature;
+bool T_H_Toggle = true;
+int humidity_opacity = 0;
+float humidity_value = 0;
+
+void button_interrupt(){
+        T_H_Toggle = !T_H_Toggle;
+    }
+
+int main()
+{
+    serial_port.set_format(8, BufferedSerial::None, 1);
+    lcd.init();
+    printf("LCD display initialized\n");
+lcd.display();
+printf("LCD activated");
+thread_sleep_for(ACTIVATION_PAUSE_MS);
+
+    if (hts_sensor.init(NULL) != 0){
+
+        printf("failed\n");
+        return 0;
+
+    }
+    
+
+    printf("Initialized\n");
+
+    hts_sensor.enable();
+
+    if (hts_sensor.enable() != 0){
+        printf("Failed");
+        return 0;
+    }
+    printf("Activated\n");
+    button.fall(&button_interrupt);
+    while (true) {
+lcd.clear();
+hts_sensor.get_humidity(&humidity);
+humidity_value = humidity*0.01;
+humidity_opacity = (1-humidity_value)*255;
+hts_sensor.get_temperature(&temperature);
+printf("New loop");
+printf("Humidity: \n", humidity);
+printf("Temperature: \n", temperature);
+if (T_H_Toggle == true) {
+    lcd.printf("Temperature:");
+    lcd.setCursor(0, 1);
+    lcd.printf("%.1f", temperature);
+    if (temperature < 20){
+        lcd.setRGB(0, 0, 255);
+
+    }
+    else if (20 <= temperature & temperature <= 24) {
+
+    lcd.setRGB(255, 165, 0);
+
+    }
+    else if (temperature > 24) {
+        lcd.setRGB(255, 0, 0);
+    }
+
+}
+    else if (T_H_Toggle == false) {
+        lcd.printf("Humidity:");
+        lcd.setCursor(0, 1);
+        lcd.printf("%.1f%%", humidity);
+        lcd.setRGB(humidity_opacity, humidity_opacity, 255);
+
+    
+    }
+    {
+    
+        thread_sleep_for(SLEEP_TIME_MS);
+    }
+}
+}
