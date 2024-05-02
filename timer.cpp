@@ -1,9 +1,3 @@
-/* mbed Microcontroller Library
- * Copyright (c) 2019 ARM Limited
- * SPDX-License-Identifier: Apache-2.0
- */
-
-
 #define wait_ms 100 
 #include "mbed.h"
 
